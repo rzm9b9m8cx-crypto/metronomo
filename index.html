@@ -10,7 +10,6 @@
             --metro-body: #1c1c1c;
             --text-color: #e0e0e0;
             --accent-color: #aaaaaa;
-            --pendulum-color: #silver;
         }
 
         body {
@@ -61,12 +60,11 @@
         /* O Pêndulo que balança */
         .pendulum-container {
             position: absolute;
-            bottom: 10px; /* Ponto de giro na base */
+            bottom: 10px; 
             width: 4px;
             height: 200px;
             transform-origin: bottom center;
             z-index: 2;
-            /* A transição será controlada pelo JavaScript para ficar no tempo exato */
             transform: rotate(0deg); 
         }
 
@@ -87,7 +85,6 @@
             left: -10px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            /* Posição inicial visual baseada em 76 BPM */
             top: 60%; 
             transition: top 0.2s;
         }
@@ -177,7 +174,6 @@
 </head>
 <body>
 
-    <!-- Visual do Metrônomo Mecânico -->
     <div class="metronome-body">
         <div class="scale">
             <span>40</span>
@@ -195,7 +191,6 @@
         </div>
     </div>
 
-    <!-- Controles -->
     <div class="controls">
         <div class="bpm-display"><span id="bpm-value">76</span></div>
         <div class="bpm-label">Batimentos por Minuto</div>
@@ -210,11 +205,9 @@
     </div>
 
     <script>
-        // Configurações Iniciais
         let bpm = 76;
         let isPlaying = false;
         
-        // Elementos DOM
         const bpmValue = document.getElementById('bpm-value');
         const bpmSlider = document.getElementById('bpm-slider');
         const playBtn = document.getElementById('play-btn');
@@ -223,43 +216,46 @@
         const pendulum = document.getElementById('pendulum');
         const weight = document.getElementById('weight');
 
-        // Web Audio API para o som perfeito
         let audioContext;
         let nextNoteTime = 0.0;
         let timerWorker = null;
-        let swingLeft = true; // Controla o lado do pêndulo
+        let swingLeft = true; 
 
-        // Função para criar um som mecânico agudo ("Clack")
+        // NOVO SOM: Mais fino e agudo
         function playMechanicalClick(time) {
             const osc = audioContext.createOscillator();
+            const filter = audioContext.createBiquadFilter(); // Cria um filtro
             const gainNode = audioContext.createGain();
 
-            osc.connect(gainNode);
+            // Conecta: Oscilador -> Filtro -> Volume -> Saída de Áudio
+            osc.connect(filter);
+            filter.connect(gainNode);
             gainNode.connect(audioContext.destination);
 
-            // Para simular o som do mecanismo de plástico/metal:
-            // Usamos uma onda 'square' muito curta que cai rapidamente de tom
             osc.type = 'square';
             
-            // Frequência inicial bem alta (AGUDO) caindo para grave num instante
-            osc.frequency.setValueAtTime(1500, time);
-            osc.frequency.exponentialRampToValueAtTime(100, time + 0.015);
+            // Frequência bem mais alta para dar o aspecto de "metal fino"
+            osc.frequency.setValueAtTime(3500, time);
+            osc.frequency.exponentialRampToValueAtTime(800, time + 0.01);
 
-            // Volume: Ataque instantâneo, decaimento super rápido (0.02 segundos)
+            // FILTRO HIGHPASS: Isso é o segredo. Corta qualquer som grave/grosso.
+            // Só deixa passar as frequências agudas (acima de 2500Hz).
+            filter.type = 'highpass';
+            filter.frequency.value = 2500;
+
+            // Volume: Duração ainda mais curta para ser um estalo seco (0.015s)
             gainNode.gain.setValueAtTime(0.8, time);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.015);
 
             osc.start(time);
-            osc.stop(time + 0.03);
+            osc.stop(time + 0.02);
 
-            // Sincroniza o balanço do pêndulo EXATAMENTE no momento do som
+            // Animação
             const timeToWait = (time - audioContext.currentTime) * 1000;
             setTimeout(() => {
                 const secondsPerBeat = 60 / bpm;
-                // Ajusta a velocidade da animação CSS para bater com o BPM
                 pendulum.style.transition = `transform ${secondsPerBeat}s cubic-bezier(0.4, 0.0, 0.6, 1)`;
                 
-                // Alterna os lados (35 graus pra esquerda, 35 pra direita)
                 if (swingLeft) {
                     pendulum.style.transform = 'rotate(-35deg)';
                 } else {
@@ -291,12 +287,10 @@
             isPlaying = !isPlaying;
 
             if (isPlaying) {
-                // Ao iniciar, puxa o pêndulo para um lado instantaneamente
                 pendulum.style.transition = 'none';
                 pendulum.style.transform = 'rotate(35deg)';
                 swingLeft = true;
                 
-                // Dá um pequeno atraso (0.1s) e começa
                 nextNoteTime = audioContext.currentTime + 0.1; 
                 scheduler();
                 
@@ -305,7 +299,6 @@
             } else {
                 clearTimeout(timerWorker);
                 
-                // Retorna o pêndulo ao centro
                 pendulum.style.transition = 'transform 0.5s ease-out';
                 pendulum.style.transform = 'rotate(0deg)';
                 
@@ -318,8 +311,6 @@
             bpmValue.textContent = bpm;
             bpmSlider.value = bpm;
             
-            // Move o peso do pêndulo visualmente dependendo do BPM
-            // (BPM alto = peso em baixo, BPM baixo = peso no topo)
             const minBpm = 40;
             const maxBpm = 208;
             const percentage = 100 - ((bpm - minBpm) / (maxBpm - minBpm) * 100);
@@ -328,12 +319,11 @@
 
         function updateBpm(newBpm) {
             if (newBpm < 40) newBpm = 40;
-            if (newBpm > 208) newBpm = 208; // 208 é o padrão máximo histórico
+            if (newBpm > 208) newBpm = 208; 
             bpm = newBpm;
             updateDisplay();
         }
 
-        // Eventos
         playBtn.addEventListener('click', toggleMetronome);
 
         bpmSlider.addEventListener('input', (e) => {
@@ -343,7 +333,6 @@
         minusBtn.addEventListener('click', () => updateBpm(bpm - 1));
         plusBtn.addEventListener('click', () => updateBpm(bpm + 1));
 
-        // Inicializa a posição do peso
         updateDisplay();
     </script>
 </body>
