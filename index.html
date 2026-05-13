@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metrônomo 76 BPM</title>
+    <title>Metrônomo Mecânico 76 BPM</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
+            --bg-color: #0a0a0a;
+            --metro-body: #1c1c1c;
             --text-color: #e0e0e0;
-            --accent-color: #4CAF50;
-            --accent-hover: #45a049;
-            --border-color: #333;
+            --accent-color: #aaaaaa;
+            --pendulum-color: #silver;
         }
 
         body {
@@ -19,6 +18,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -26,240 +26,264 @@
             user-select: none;
         }
 
-        .metronome-container {
-            background-color: var(--panel-bg);
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            width: 300px;
-            border: 1px solid var(--border-color);
+        /* Formato do Metrônomo */
+        .metronome-body {
+            background: linear-gradient(145deg, #2a2a2a, #111111);
+            width: 140px;
+            height: 250px;
+            position: relative;
+            clip-path: polygon(30% 0, 70% 0, 100% 100%, 0% 100%);
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            margin-bottom: 40px;
         }
 
-        h1 {
-            margin-top: 0;
-            font-size: 24px;
-            color: #fff;
-            margin-bottom: 30px;
+        /* A escala de números no fundo */
+        .scale {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            width: 30px;
+            background-color: #ddd;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            box-sizing: border-box;
+            color: #000;
+            font-size: 10px;
+            font-weight: bold;
+            z-index: 1;
+        }
+
+        /* O Pêndulo que balança */
+        .pendulum-container {
+            position: absolute;
+            bottom: 10px; /* Ponto de giro na base */
+            width: 4px;
+            height: 200px;
+            transform-origin: bottom center;
+            z-index: 2;
+            /* A transição será controlada pelo JavaScript para ficar no tempo exato */
+            transform: rotate(0deg); 
+        }
+
+        .pendulum-rod {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, #ccc, #fff, #ccc);
+            border-radius: 2px;
+            position: relative;
+        }
+
+        /* O peso no pêndulo */
+        .pendulum-weight {
+            width: 24px;
+            height: 20px;
+            background: linear-gradient(to bottom, #888, #444);
+            position: absolute;
+            left: -10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            /* Posição inicial visual baseada em 76 BPM */
+            top: 60%; 
+            transition: top 0.2s;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            width: 280px;
         }
 
         .bpm-display {
-            font-size: 64px;
+            font-size: 48px;
             font-weight: bold;
-            margin: 20px 0;
-            color: var(--accent-color);
+            color: #fff;
+            margin-bottom: 5px;
         }
 
         .bpm-label {
-            font-size: 18px;
+            font-size: 14px;
             color: #888;
+            margin-bottom: 15px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
         input[type=range] {
             -webkit-appearance: none;
-            width: 100%;
+            flex-grow: 1;
             background: transparent;
-            margin: 20px 0;
         }
 
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 24px;
-            width: 24px;
+            height: 20px;
+            width: 20px;
             border-radius: 50%;
-            background: var(--accent-color);
+            background: #fff;
             cursor: pointer;
-            margin-top: -10px;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            margin-top: -8px;
         }
 
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 6px;
+            height: 4px;
             cursor: pointer;
-            background: var(--border-color);
-            border-radius: 3px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 30px;
+            background: #555;
+            border-radius: 2px;
         }
 
         button {
             background-color: #333;
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 15px 20px;
-            font-size: 20px;
+            border-radius: 6px;
+            padding: 10px 15px;
+            font-size: 18px;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
         }
 
-        button:active {
-            transform: scale(0.95);
-        }
-
-        button:hover {
-            background-color: #444;
-        }
-
+        button:active { transform: scale(0.95); }
+        
         #play-btn {
-            background-color: var(--accent-color);
-            flex-grow: 1;
-            margin: 0 15px;
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
             font-weight: bold;
-            font-size: 20px;
+            background-color: #4CAF50;
+            text-transform: uppercase;
         }
 
-        #play-btn:hover {
-            background-color: var(--accent-hover);
-        }
-
-        .indicator-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .dot {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background-color: #333;
-            transition: background-color 0.1s;
-        }
-
-        .dot.active {
-            background-color: var(--accent-color);
-            box-shadow: 0 0 10px var(--accent-color);
-        }
-
-        .dot.active.first-beat {
+        #play-btn.playing {
             background-color: #ff5252;
-            box-shadow: 0 0 10px #ff5252;
         }
 
     </style>
 </head>
 <body>
 
-    <div class="metronome-container">
-        <h1>Metrônomo Digital</h1>
-        
-        <div class="indicator-container" id="indicators">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+    <!-- Visual do Metrônomo Mecânico -->
+    <div class="metronome-body">
+        <div class="scale">
+            <span>40</span>
+            <span>60</span>
+            <span>80</span>
+            <span>100</span>
+            <span>120</span>
+            <span>160</span>
+            <span>208</span>
         </div>
-
-        <div class="bpm-display"><span id="bpm-value">76</span></div>
-        <div class="bpm-label">BPM</div>
-
-        <input type="range" id="bpm-slider" min="30" max="250" value="76">
-
-        <div class="controls">
-            <button id="minus-btn">-</button>
-            <button id="play-btn">INICIAR</button>
-            <button id="plus-btn">+</button>
+        <div class="pendulum-container" id="pendulum">
+            <div class="pendulum-rod">
+                <div class="pendulum-weight" id="weight"></div>
+            </div>
         </div>
     </div>
 
+    <!-- Controles -->
+    <div class="controls">
+        <div class="bpm-display"><span id="bpm-value">76</span></div>
+        <div class="bpm-label">Batimentos por Minuto</div>
+
+        <div class="slider-container">
+            <button id="minus-btn">-</button>
+            <input type="range" id="bpm-slider" min="40" max="208" value="76">
+            <button id="plus-btn">+</button>
+        </div>
+
+        <button id="play-btn">Iniciar Pêndulo</button>
+    </div>
+
     <script>
-        // Variáveis de Estado
+        // Configurações Iniciais
         let bpm = 76;
         let isPlaying = false;
-        let beatsPerMeasure = 4;
         
-        // Elementos do DOM
+        // Elementos DOM
         const bpmValue = document.getElementById('bpm-value');
         const bpmSlider = document.getElementById('bpm-slider');
         const playBtn = document.getElementById('play-btn');
         const minusBtn = document.getElementById('minus-btn');
         const plusBtn = document.getElementById('plus-btn');
-        const dots = document.querySelectorAll('.dot');
+        const pendulum = document.getElementById('pendulum');
+        const weight = document.getElementById('weight');
 
-        // Variáveis do Web Audio API (Para precisão de tempo)
+        // Web Audio API para o som perfeito
         let audioContext;
-        let currentBeat = 0;
         let nextNoteTime = 0.0;
         let timerWorker = null;
-        let lookahead = 25; // Milissegundos que o timer acorda
-        let scheduleAheadTime = 0.1; // Quão longe no futuro agendar o áudio (segundos)
+        let swingLeft = true; // Controla o lado do pêndulo
 
-        // Função para criar o som de "Click" realista
-        function playClick(time, isFirstBeat) {
-            // Cria os nós de áudio
+        // Função para criar um som mecânico agudo ("Clack")
+        function playMechanicalClick(time) {
             const osc = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
             osc.connect(gainNode);
             gainNode.connect(audioContext.destination);
 
-            // Configuração do som (Timbre)
-            if (isFirstBeat) {
-                // Som mais agudo e forte no primeiro tempo (Ping)
-                osc.frequency.value = 1200;
-            } else {
-                // Som mais grave nos outros tempos (Tak)
-                osc.frequency.value = 800;
-            }
+            // Para simular o som do mecanismo de plástico/metal:
+            // Usamos uma onda 'square' muito curta que cai rapidamente de tom
+            osc.type = 'square';
+            
+            // Frequência inicial bem alta (AGUDO) caindo para grave num instante
+            osc.frequency.setValueAtTime(1500, time);
+            osc.frequency.exponentialRampToValueAtTime(100, time + 0.015);
 
-            // Envelope de volume (Ataque rápido, queda rápida para parecer mecânico)
-            gainNode.gain.setValueAtTime(1, time);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            // Volume: Ataque instantâneo, decaimento super rápido (0.02 segundos)
+            gainNode.gain.setValueAtTime(0.8, time);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
 
-            // Inicia e para o som
             osc.start(time);
-            osc.stop(time + 0.05);
+            osc.stop(time + 0.03);
 
-            // Sincroniza a interface visual (bolinhas) com o tempo do áudio
+            // Sincroniza o balanço do pêndulo EXATAMENTE no momento do som
+            const timeToWait = (time - audioContext.currentTime) * 1000;
             setTimeout(() => {
-                updateVisuals(isFirstBeat);
-            }, (time - audioContext.currentTime) * 1000);
+                const secondsPerBeat = 60 / bpm;
+                // Ajusta a velocidade da animação CSS para bater com o BPM
+                pendulum.style.transition = `transform ${secondsPerBeat}s cubic-bezier(0.4, 0.0, 0.6, 1)`;
+                
+                // Alterna os lados (35 graus pra esquerda, 35 pra direita)
+                if (swingLeft) {
+                    pendulum.style.transform = 'rotate(-35deg)';
+                } else {
+                    pendulum.style.transform = 'rotate(35deg)';
+                }
+                swingLeft = !swingLeft;
+
+            }, timeToWait);
         }
 
-        // Atualiza as luzes visuais
-        function updateVisuals(isFirstBeat) {
-            dots.forEach(dot => dot.className = 'dot'); // Limpa todos
-            if (isFirstBeat) {
-                dots[currentBeat].classList.add('active', 'first-beat');
-            } else {
-                dots[currentBeat].classList.add('active');
-            }
-        }
-
-        // Calcula quando será o próximo batimento
         function nextNote() {
             const secondsPerBeat = 60.0 / bpm;
             nextNoteTime += secondsPerBeat;
-            
-            // Avança o contador de batidas (0, 1, 2, 3 para compasso 4/4)
-            currentBeat++;
-            if (currentBeat === beatsPerMeasure) {
-                currentBeat = 0;
-            }
         }
 
-        // Função principal que agenda os sons
         function scheduler() {
-            // Enquanto o próximo batimento estiver dentro do nosso "radar" de tempo futuro
-            while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
-                playClick(nextNoteTime, currentBeat === 0);
+            while (nextNoteTime < audioContext.currentTime + 0.1) {
+                playMechanicalClick(nextNoteTime);
                 nextNote();
             }
-            timerWorker = setTimeout(scheduler, lookahead);
+            timerWorker = setTimeout(scheduler, 25);
         }
 
-        // Inicia ou para o metrônomo
         function toggleMetronome() {
-            // Navegadores exigem que o contexto de áudio seja criado após uma interação do usuário
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
@@ -267,45 +291,60 @@
             isPlaying = !isPlaying;
 
             if (isPlaying) {
-                currentBeat = 0;
-                nextNoteTime = audioContext.currentTime + 0.05; // Começa quase imediatamente
+                // Ao iniciar, puxa o pêndulo para um lado instantaneamente
+                pendulum.style.transition = 'none';
+                pendulum.style.transform = 'rotate(35deg)';
+                swingLeft = true;
+                
+                // Dá um pequeno atraso (0.1s) e começa
+                nextNoteTime = audioContext.currentTime + 0.1; 
                 scheduler();
-                playBtn.textContent = "PARAR";
-                playBtn.style.backgroundColor = "#ff5252"; // Fica vermelho ao parar
+                
+                playBtn.textContent = "PARAR PÊNDULO";
+                playBtn.classList.add('playing');
             } else {
                 clearTimeout(timerWorker);
-                playBtn.textContent = "INICIAR";
-                playBtn.style.backgroundColor = "var(--accent-color)";
-                dots.forEach(dot => dot.className = 'dot'); // Limpa as luzes
+                
+                // Retorna o pêndulo ao centro
+                pendulum.style.transition = 'transform 0.5s ease-out';
+                pendulum.style.transform = 'rotate(0deg)';
+                
+                playBtn.textContent = "INICIAR PÊNDULO";
+                playBtn.classList.remove('playing');
             }
         }
 
-        // Atualiza a interface e a variável BPM
-        function updateBpm(newBpm) {
-            // Limites de segurança
-            if (newBpm < 30) newBpm = 30;
-            if (newBpm > 250) newBpm = 250;
-            
-            bpm = newBpm;
+        function updateDisplay() {
             bpmValue.textContent = bpm;
             bpmSlider.value = bpm;
+            
+            // Move o peso do pêndulo visualmente dependendo do BPM
+            // (BPM alto = peso em baixo, BPM baixo = peso no topo)
+            const minBpm = 40;
+            const maxBpm = 208;
+            const percentage = 100 - ((bpm - minBpm) / (maxBpm - minBpm) * 100);
+            weight.style.top = `${percentage}%`;
         }
 
-        // Event Listeners (Ações do usuário)
+        function updateBpm(newBpm) {
+            if (newBpm < 40) newBpm = 40;
+            if (newBpm > 208) newBpm = 208; // 208 é o padrão máximo histórico
+            bpm = newBpm;
+            updateDisplay();
+        }
+
+        // Eventos
         playBtn.addEventListener('click', toggleMetronome);
 
         bpmSlider.addEventListener('input', (e) => {
             updateBpm(parseInt(e.target.value));
         });
 
-        minusBtn.addEventListener('click', () => {
-            updateBpm(bpm - 1);
-        });
+        minusBtn.addEventListener('click', () => updateBpm(bpm - 1));
+        plusBtn.addEventListener('click', () => updateBpm(bpm + 1));
 
-        plusBtn.addEventListener('click', () => {
-            updateBpm(bpm + 1);
-        });
-
+        // Inicializa a posição do peso
+        updateDisplay();
     </script>
 </body>
 </html>
